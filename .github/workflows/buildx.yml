@@ -1,0 +1,41 @@
+name: Build and Push Docker Image (Persistent Builder)
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/buildx-html-demo
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up persistent Docker Buildx builder
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: image=moby/buildkit:latest
+        buildkitd-flags: --debug
+        install: true
+        endpoint: github-actions-builder
+        use: true
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        builder: github-actions-builder
+        push: true
+        tags: ${{ env.IMAGE_NAME }}:latest
+        provenance: false
